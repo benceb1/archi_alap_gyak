@@ -19,14 +19,26 @@ Start:
 
   ; karakter bekeres (16h megszakitas (keyboard io))
   ; 0-as funkcio -> read keyboard input (ezt a kodot majd az ah-ba kell betenni)
-  ; a funkcio var, es ha kap egy billentyuleutest, azt az al-be tolti be egy ascii kodkent, addig varakozik, amig nem kap
+  ; a funkcio var, es ha kap egy billentyuleutest, azt az #### al-be #### tolti be egy ascii kodkent, addig varakozik, amig nem kap
 read_character:
   mov ah, 0
   int 16h
 
   ; osszehasonlitas (kilep vagy folytatja)
   cmp al, 27 ; 27 az esc kodja, azaz csak akkor megy tovabb, ha a leutott billentyu az esc
-  je osszegzes ; ha esc akkor kilep
+  je ciklus_vege ; ha esc akkor kilep
+
+  ; ### utolag hozzaadott, a szam szamlalohoz ugrik, ha a bekert karakter egy szam
+  cmp al, '0' ; osszehasonlitja a 0 karakter ascii sorszamaval
+  jl read_character
+  cmp al, '9'
+  jng szam
+
+  cmp al, 'A' ; 
+  jl read_character
+  cmp al, 'Z'
+  jng nagy
+
 
   ; (utolag mellekelt tartalom ebben a kis blokkban a kommentes sor)
   ; cel az, hogy minden kisbetunel inkrementaljon
@@ -57,23 +69,75 @@ read_character:
   ; ebben az esetben mindenkeppen kell egy szamlalo
 
 novel:
+  mov si, offset szamlalo2 ; szamlalo cimet betoltjuk az si regiszterbe
+  mov bl, [si] ; bl megkapja az si regiszter altal mutatott 8 bites erteket (ami a 0 eseteben a 48??)
+  inc bl ;inkrementaljuk igy lesz 49 ami mar az 1-nek felel meg
+  mov [si], bl ; a vegeredmenyt visszairjuk a memoriateruletre
+  jmp read_character
+
+
+szam:
   mov si, offset szamlalo ; szamlalo cimet betoltjuk az si regiszterbe
   mov bl, [si] ; bl megkapja az si regiszter altal mutatott 8 bites erteket (ami a 0 eseteben a 48??)
   inc bl ;inkrementaljuk igy lesz 49 ami mar az 1-nek felel meg
   mov [si], bl ; a vegeredmenyt visszairjuk a memoriateruletre
   jmp read_character
 
-osszegzes:
+nagy:
+  mov si, offset szamlalo1 ; szamlalo cimet betoltjuk az si regiszterbe
+  mov bl, [si] ; bl megkapja az si regiszter altal mutatott 8 bites erteket (ami a 0 eseteben a 48??)
+  inc bl ;inkrementaljuk igy lesz 49 ami mar az 1-nek felel meg
+  mov [si], bl ; a vegeredmenyt visszairjuk a memoriateruletre
+  jmp read_character
+
+
+ciklus_vege:
+; kurzor pozícionálás 
+	; 10h megszakítás
+	; 02 funkció (ah-ba kell majd beállítani)
+	; dh (x koordinata)
+	; dl (y koordinata)
+	; bh (melyik videopage- altalaban a 0-asat fogjuk venni)
+  mov ah, 2
+  mov bh, 0
+  mov dh, 12; sor
+  mov dl, 31; oszlop
+  int 10h
+
   mov ah, 9
   mov dx, offset szoveg
+  int 21h
+
+  mov ah, 2
+  mov bh, 0
+  mov dh, 13; sor
+  mov dl, 31; oszlop
+  int 10h
+
+  mov ah, 9
+  mov dx, offset szoveg1
+  int 21h
+
+  mov ah, 2
+  mov bh, 0
+  mov dh, 14; sor
+  mov dl, 31; oszlop
+  int 10h
+
+  mov ah, 9
+  mov dx, offset szoveg2
   int 21h
 
 end_of_program:
 	mov ax, 4c00h
 	int 21h
 
-szoveg db "a lenyomott karakterek szama: "
+szoveg db "a lenyomott szamok szama: "
 szamlalo db "0$" ; egy egyjegyu szamlalonak felel meg
+szoveg1 db "a lenyomott nagybetuk szama: "
+szamlalo1 db "0$"
+szoveg2 db "a lenyomott kisbetuk szama: "
+szamlalo2 db "0$"
 
 ; [kesobbi fobb feladatok]
 ; egyszerre egy számlálón számolja a 'a' és 'A' karaktert
